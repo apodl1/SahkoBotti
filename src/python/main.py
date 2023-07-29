@@ -14,7 +14,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id = update.effective_chat.id, text = "Sähkön hinnan kertova botti. Lähetä komento /hinta saadaksesi vastauksen.")
 
 async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id = update.effective_chat.id, text = price_processing.get_texts())
+    await context.bot.send_message(chat_id = update.effective_chat.id, text = price_processing.construct_texts())
 
 if __name__ == '__main__':
     application = ApplicationBuilder().token(tokens.telegram_token).build()
