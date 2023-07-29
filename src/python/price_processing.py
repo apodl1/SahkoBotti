@@ -58,7 +58,7 @@ def construct_texts():
                     price_snt_kwh = price / 10
                     price_snt_kwh_formatted = format(price_snt_kwh, '.2f')
                     tags = "#" * round(price_snt_kwh * 2)
-                    hours_to_hour = (0 if (prices_printed - 1) < 0 else prices_printed - 1)
+                    hours_to_hour = (prices_printed)
                     displayable_text += f"{HEL_hour:0{2}d} [{hours_to_hour:0{2}d}]:   {price_snt_kwh_formatted}snt    {tags}\n"
                     prices_printed += 1
 
