@@ -1,0 +1,2 @@
+Botilla on vain yksi komento: /hinta. Komento saa botin vastaamaan taulukolla, josta voi lukea tulevien tuntien pörssisähkön hinnat.
+Vastausformaatti on seuraava: "kellonaika [tunteja kellonaikaan]: hinta/kWh {hinnan demonstroiva risuaitarivi}"
