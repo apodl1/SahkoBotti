@@ -4,16 +4,11 @@ import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, time, timezone
 
-current_UTC = datetime.now(timezone.utc).replace(tzinfo=None)
-current_HEL = datetime.now()
-time_difference_h = (current_HEL - current_UTC).seconds / 3600
-previous_UTC = datetime.combine(current_UTC, time.min) - timedelta(days=1)
-previous_UTC_formatted = previous_UTC.strftime("%Y%m%d%H%M")
-
-current_HEL_hour = current_HEL.strftime("%H")
-
-
 def get_prices():
+    current_UTC = datetime.now(timezone.utc).replace(tzinfo=None)
+    previous_UTC = datetime.combine(current_UTC, time.min) - timedelta(days=1)
+    previous_UTC_formatted = previous_UTC.strftime("%Y%m%d%H%M")
+
     get_url = f"https://web-api.tp.entsoe.eu/api?securityToken={tokens.entsoe_token}&documentType=A44&in_Domain=10YFI-1--------U&out_Domain=10YFI-1--------U&periodStart={previous_UTC_formatted}&periodEnd=202312310000"
     try:
         response_text = requests.get(get_url).text
@@ -26,6 +21,11 @@ def get_prices():
     return response_text
 
 def construct_texts():
+
+    current_UTC = datetime.now(timezone.utc).replace(tzinfo=None)
+    current_HEL = datetime.now()
+    timezone_difference_h = (current_HEL - current_UTC).seconds / 3600
+    current_HEL_hour = current_HEL.strftime("%H")
 
     try:
         root = ET.fromstring(get_prices())
@@ -50,7 +50,7 @@ def construct_texts():
                 if hour == 24:
                     HEL_hour = 0
                 else:
-                    HEL_hour = int(hour + time_diff_in_data_h - time_difference_h)
+                    HEL_hour = int(hour + time_diff_in_data_h - timezone_difference_h)
                 if HEL_hour >= int(current_HEL_hour):
                     later_than_now = True
                 if later_than_now:
