@@ -2,6 +2,8 @@ import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, time, timezone
 
+prices = ""
+
 def get_prices():
     current_UTC = datetime.now(timezone.utc).replace(tzinfo=None)
     previous_UTC = datetime.combine(current_UTC, time.min) - timedelta(days=1)
@@ -12,6 +14,7 @@ def get_prices():
 
     get_url = f"https://web-api.tp.entsoe.eu/api?securityToken={entsoe_token}&documentType=A44&in_Domain=10YFI-1--------U&out_Domain=10YFI-1--------U&periodStart={previous_UTC_formatted}&periodEnd=202312310000"
     try:
+        print("Request sent")
         response_text = requests.get(get_url).text
     except requests.RequestException as e:
         print(f"An error occurred during the request: {e}")
@@ -19,7 +22,13 @@ def get_prices():
     
     print("Answer received")
 
-    return response_text
+    global prices
+    prices_updated_flag = (response_text == prices)
+    prices = response_text
+
+
+    return prices_updated_flag
+
 
 
 def construct_texts():
@@ -30,7 +39,7 @@ def construct_texts():
     current_HEL_hour = current_HEL.strftime("%H")
 
     try:
-        root = ET.fromstring(get_prices())
+        root = ET.fromstring(prices)
     except ET.ParseError as e:
         print("XML Parsing Error:", e)
 

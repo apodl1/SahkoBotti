@@ -3,16 +3,18 @@ import price_processing
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
+import schedule
+import asyncio
 
 logging.basicConfig(
     format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level = logging.INFO
 )
 
-with open('start_message.txt', 'r') as file:
+with open('start_message.txt', 'r', encoding='utf-8') as file:
     start_message = file.read()
 
-with open('help_message.txt', 'r') as file:
+with open('help_message.txt', 'r', encoding='utf-8') as file:
     help_message = file.read()
 
 with open('telegram_token.txt', 'r') as file:
@@ -29,6 +31,13 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id = update.effective_chat.id, text = help_message)
 
 
+async def schedule_loop():
+    while True:
+        schedule.run_pending()
+        print("waiting")
+        await asyncio.sleep(1 * 60)
+
+
 if __name__ == '__main__':
     application = ApplicationBuilder().token(telegram_token).build()
     
@@ -39,4 +48,13 @@ if __name__ == '__main__':
     application.add_handler(price_handler)
     application.add_handler(help_handler)
     
+
+    price_processing.get_prices()
+
+    schedule.every().day.at("16:00").do(price_processing.get_prices)
+
+    asyncio.ensure_future(schedule_loop())
+    asyncio.get_event_loop().run_forever
+
+
     application.run_polling()
