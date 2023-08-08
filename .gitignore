@@ -1,2 +1,3 @@
-src/python/tokens.py
 .venv
+telegram_token.txt
+entsoe_token.txt
