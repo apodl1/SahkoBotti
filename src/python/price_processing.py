@@ -1,5 +1,3 @@
-import tokens
-
 import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, time, timezone
@@ -9,7 +7,10 @@ def get_prices():
     previous_UTC = datetime.combine(current_UTC, time.min) - timedelta(days=1)
     previous_UTC_formatted = previous_UTC.strftime("%Y%m%d%H%M")
 
-    get_url = f"https://web-api.tp.entsoe.eu/api?securityToken={tokens.entsoe_token}&documentType=A44&in_Domain=10YFI-1--------U&out_Domain=10YFI-1--------U&periodStart={previous_UTC_formatted}&periodEnd=202312310000"
+    with open('entsoe_token.txt', 'r') as file:
+        entsoe_token = file.read()
+
+    get_url = f"https://web-api.tp.entsoe.eu/api?securityToken={entsoe_token}&documentType=A44&in_Domain=10YFI-1--------U&out_Domain=10YFI-1--------U&periodStart={previous_UTC_formatted}&periodEnd=202312310000"
     try:
         response_text = requests.get(get_url).text
     except requests.RequestException as e:
@@ -19,6 +20,7 @@ def get_prices():
     print("Answer received")
 
     return response_text
+
 
 def construct_texts():
 
@@ -63,5 +65,3 @@ def construct_texts():
                     prices_printed += 1
 
     return displayable_text
-
-#print(construct_texts())

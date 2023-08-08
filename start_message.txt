@@ -1,0 +1,1 @@
+Pörssisähkön tulevan tuntihinnan kertova botti. Lähetä komento /hinta saadaksesi vastauksen tai /help pyytääksesti lisää tietoa.
