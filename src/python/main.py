@@ -11,13 +11,13 @@ logging.basicConfig(
     level = logging.INFO
 )
 
-with open('start_message.txt', 'r', encoding='utf-8') as file:
+with open('../../start_message.txt', 'r', encoding='utf-8') as file:
     start_message = file.read()
 
-with open('help_message.txt', 'r', encoding='utf-8') as file:
+with open('../../help_message.txt', 'r', encoding='utf-8') as file:
     help_message = file.read()
 
-with open('telegram_token.txt', 'r') as file:
+with open('../../telegram_token.txt', 'r') as file:
     telegram_token = file.read()
 
 
