@@ -9,7 +9,7 @@ def get_prices():
     previous_UTC = datetime.combine(current_UTC, time.min) - timedelta(days=1)
     previous_UTC_formatted = previous_UTC.strftime("%Y%m%d%H%M")
 
-    with open('../../entsoe_token.txt', 'r') as file:
+    with open('entsoe_token.txt', 'r') as file:
         entsoe_token = file.read()
 
     get_url = f"https://web-api.tp.entsoe.eu/api?securityToken={entsoe_token}&documentType=A44&in_Domain=10YFI-1--------U&out_Domain=10YFI-1--------U&periodStart={previous_UTC_formatted}&periodEnd=202312310000"
