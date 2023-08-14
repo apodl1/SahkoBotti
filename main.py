@@ -12,13 +12,13 @@ logging.basicConfig(
 )
 
 with open('messages/start_message.txt', 'r', encoding='utf-8') as file:
-    start_message = file.read()
+    start_message = file.read().rstrip()
 
 with open('messages/help_message.txt', 'r', encoding='utf-8') as file:
-    help_message = file.read()
+    help_message = file.read().rstrip()
 
 with open('telegram_token.txt', 'r') as file:
-    telegram_token = file.read()
+    telegram_token = file.read().rstrip()
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
