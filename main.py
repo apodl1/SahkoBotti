@@ -8,7 +8,7 @@ import asyncio
 
 logging.basicConfig(
     format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level = logging.INFO
+    level = logging.CRITICAL
 )
 
 with open('messages/start_message.txt', 'r', encoding='utf-8') as file:
@@ -35,7 +35,7 @@ async def schedule_loop():
     while True:
         schedule.run_pending()
         print("waiting")
-        await asyncio.sleep(1 * 60)
+        await asyncio.sleep(1 * 60 * 15)
 
 
 if __name__ == '__main__':

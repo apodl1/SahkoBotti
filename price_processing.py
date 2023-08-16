@@ -49,7 +49,7 @@ def construct_texts():
     later_than_now = False
     time_diff_in_data_h = 3
     prices_printed = 0
-    prices_to_print = 30
+    prices_to_print = 20
 
     for day in root.findall('{*}TimeSeries'):
         for point in day.find("{*}Period").findall('{*}Point'):
