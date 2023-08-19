@@ -3,3 +3,5 @@ add day at the top of prices
 edit number of visualization hashtags
 add error handling for tokens
 investigate prvious-day-prices
+add times to entsoe-request logging
+comments
