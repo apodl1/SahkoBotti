@@ -45,32 +45,28 @@ def construct_texts():
 
     displayable_text = ""
 
-    previous_day = True
-    later_than_now = False
-    time_diff_in_data_h = 3
+    start_hour = 23
     prices_printed = 0
     prices_to_print = 20
 
     for day in root.findall('{*}TimeSeries'):
-        for point in day.find("{*}Period").findall('{*}Point'):
-            hour = int(point.find('{*}position').text)
-            if prices_printed >= prices_to_print:
-                break
-            if (not previous_day) or hour == 24:
-                previous_day = False
-                if hour == 24:
-                    HEL_hour = 0
-                else:
-                    HEL_hour = int(hour + time_diff_in_data_h - timezone_difference_h)
-                if HEL_hour >= int(current_HEL_hour):
-                    later_than_now = True
-                if later_than_now:
+        end_date = day.find("{*}Period").find("{*}timeInterval").find("{*}end").text[:10]
+        now_date = current_HEL.strftime("%Y-%m-%d")[:10]
+        if now_date <= end_date:
+            for point in day.find("{*}Period").findall('{*}Point'):
+                if prices_printed >= prices_to_print:
+                    break
+                index_of_point = int(point.find('{*}position').text)
+                hour_abs = (start_hour + index_of_point - 1)
+                HEL_hour_abs = int(hour_abs + timezone_difference_h)
+                HEL_hour_real = HEL_hour_abs % 24
+                if now_date < end_date or HEL_hour_real >= int(current_HEL_hour) or HEL_hour_abs == 48: #a bit of a band-aid :D
                     price = float(point.find('{*}price.amount').text)
                     price_snt_kwh = price / 10
                     price_snt_kwh_formatted = format(price_snt_kwh, '.2f')
                     tags = "#" * round(price_snt_kwh * 2)
-                    hours_to_hour = (prices_printed)
-                    displayable_text += f"{HEL_hour:0{2}d} [{hours_to_hour:0{2}d}]:   {price_snt_kwh_formatted}snt    {tags}\n"
+                    hours_to_price = (prices_printed)
+                    displayable_text += f"{HEL_hour_real:0{2}d} [{hours_to_price:0{2}d}]:   {price_snt_kwh_formatted}snt    {tags}\n"
                     prices_printed += 1
 
     return displayable_text
