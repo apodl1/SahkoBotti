@@ -1,5 +1,4 @@
 add day at the top of prices
 edit number of visualization hashtags
 add error handling for tokens
-add times to entsoe-request logging
 comments
