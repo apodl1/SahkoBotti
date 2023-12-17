@@ -8,19 +8,21 @@ def get_prices():
     current_UTC = datetime.now(timezone.utc).replace(tzinfo=None)
     previous_UTC = datetime.combine(current_UTC, time.min) - timedelta(days=1)
     previous_UTC_formatted = previous_UTC.strftime("%Y%m%d%H%M")
+    period_end = datetime.combine(current_UTC, time.min) + timedelta(days=3)
+    period_end_formatted = period_end.strftime("%Y%m%d%H%M")
 
     with open('entsoe_token.txt', 'r') as file:
         entsoe_token = file.read().rstrip()
 
-    get_url = f"https://web-api.tp.entsoe.eu/api?securityToken={entsoe_token}&documentType=A44&in_Domain=10YFI-1--------U&out_Domain=10YFI-1--------U&periodStart={previous_UTC_formatted}&periodEnd=202312310000"
+    get_url = f"https://web-api.tp.entsoe.eu/api?securityToken={entsoe_token}&documentType=A44&in_Domain=10YFI-1--------U&out_Domain=10YFI-1--------U&periodStart={previous_UTC_formatted}&periodEnd={period_end_formatted}"
     try:
-        print("Request sent")
+        print(f"Request sent at {datetime.now()}")
         response_text = requests.get(get_url).text
     except requests.RequestException as e:
         print(f"An error occurred during the request: {e}")
         return None
     
-    print("Answer received")
+    print(f"Answer received at at {datetime.now()}")
 
     global prices
     prices_updated_flag = (response_text == prices)
