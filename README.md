@@ -1,4 +1,4 @@
-A Telegram bot for getting the coming spot price of electricity in Finland. Running instance can be found at t.me/elektroniBot or with nick @elektroniBot on Telegram.
+A Telegram bot for getting the coming spot price of electricity in Finland. Running instance can be found at [t.me/elektroniBot](https://t.me/elektroniBot) or with nick @elektroniBot on Telegram.
 
 Data supplied by the ENTSO-E Transparency Platform (transparency.entsoe.eu).
 
