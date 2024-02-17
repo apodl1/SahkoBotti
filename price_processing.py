@@ -82,5 +82,9 @@ def construct_texts():
                     displayable_text += f"{HEL_hour_real:0{2}d} [{hours_to_point:0{2}d}]:   {price_snt_kwh_formatted}snt    {tags}\n" #construct final text
                     prices_printed += 1 #increment
 
+    #display error-message if displayable text is empty after loop
+    if len(displayable_text) == 0:
+        displayable_text = "Virhe hintojen hakemisessa ENTSOE:sta, ota yhteyttä @antonpodlozny ja kokeile myöhemmin uudelleen."
+    
     #return to caller
     return displayable_text
