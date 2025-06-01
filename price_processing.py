@@ -50,6 +50,9 @@ class ElecPrices():
     print(to_log)
     self.logger.info(to_log)
 
+    with open("output.xml", "w", encoding="utf-8") as file:
+        file.write(response_text)
+
     prices_dict: Optional[dict[datetime, float]] = self.extract_prices_into_dict(response_text)
     if prices_dict is not None:
       if (self.prices_dict is None) or (max(self.prices_dict) < max(prices_dict)):
@@ -89,8 +92,10 @@ class ElecPrices():
         timeInterval = period.find("{*}timeInterval")
         if timeInterval is not None:
           start_time_UTC = timeInterval.find("{*}start")
-          if start_time_UTC is not None and start_time_UTC.text is not None:
+          end_time_UTC = timeInterval.find("{*}end")
+          if start_time_UTC is not None and start_time_UTC.text is not None and end_time_UTC is not None and end_time_UTC.text is not None:
             period_start_time_local = datetime.fromisoformat(start_time_UTC.text).astimezone(ZoneInfo("Europe/Helsinki"))
+            period_end_time_local = datetime.fromisoformat(end_time_UTC.text).astimezone(ZoneInfo("Europe/Helsinki"))
           else:
             self.current_error = "Virhe ENTSOE:n palauttamassa datassa, yritä myöhemmin uudelleen."
             return None
@@ -105,6 +110,15 @@ class ElecPrices():
               hour = int(position.text) - 1
               point_time = period_start_time_local + timedelta(hours=hour)
               prices_dict[point_time] = float(price.text)
+        cur_time = period_start_time_local
+        cur_price = prices_dict[cur_time]
+        # Go through the time period, filling in hours without a price (nesessary due to the api xml omitting points if the price is the same as the previous point)
+        while cur_time <= period_end_time_local:
+          if cur_time not in prices_dict:
+            prices_dict[cur_time] = cur_price
+          else:
+            cur_price = prices_dict[cur_time]
+          cur_time += timedelta(hours=1)
 
     return prices_dict
 
