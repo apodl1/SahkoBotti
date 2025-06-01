@@ -2,7 +2,7 @@ A Telegram bot for getting the coming spot price of electricity in Finland. Runn
 
 Data supplied by the ENTSO-E Transparency Platform (transparency.entsoe.eu).
 
-Requires a Telegram bot and ENTSO-E API-tokens in directory root to function. Files have to be named "telegram_token.txt" and "entsoe_token.txt" respectively.
+Requires a Telegram bot and ENTSO-E API-tokens in directory root to function. Files have to be named ".telegram_token" and ".entsoe_token" respectively.
 
 Example response:
 <br>
