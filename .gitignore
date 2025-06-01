@@ -1,4 +1,5 @@
 .venv
-telegram_token.txt
-entsoe_token.txt
+.telegram_token
+.entsoe_token
 __pycache__
+*.log

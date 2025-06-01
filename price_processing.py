@@ -1,90 +1,140 @@
+import logging
 import requests
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta, time, timezone
+from datetime import datetime, timedelta, time
+from zoneinfo import ZoneInfo
+import math
+from typing import Optional
 
-#initial value
-prices = ""
+PRICES_TO_PRINT = 20
+TAGS_PER_EUR = 2
 
-#function to get prices from API
-def get_prices():
-    current_UTC = datetime.now(timezone.utc).replace(tzinfo=None)
-    previous_UTC = datetime.combine(current_UTC, time.min) - timedelta(days=1)
-    previous_UTC_formatted = previous_UTC.strftime("%Y%m%d%H%M")
-    period_end = datetime.combine(current_UTC, time.min) + timedelta(days=3)
+class ElecPrices():
+  def __init__(self) -> None:
+    self.prices_dict: Optional[dict[datetime, float]] = None
+    self.current_error: Optional[str] = None
+    self.logger = logging.getLogger("sahkobotti")
+
+    self.fetch_prices_to_dict() #get initial prices
+
+
+  # Get prices from API in xml format (as string response). Returns true if new prices retrieved successfully
+  def fetch_prices_to_dict(self) -> bool:
+    current_local_time = datetime.now(ZoneInfo("Europe/Helsinki"))
+    start_of_previous_day = datetime.combine(current_local_time, time.min) - timedelta(days=1)
+    start_of_previous_day_formatted = start_of_previous_day.strftime("%Y%m%d%H%M")
+    period_end = datetime.combine(current_local_time, time.min) + timedelta(days=3) #arbitary value far enough in the future, the api will then give latest info
     period_end_formatted = period_end.strftime("%Y%m%d%H%M")
 
     #read api-token for ENTSOE
-    with open('entsoe_token.txt', 'r') as file:
-        entsoe_token = file.read().rstrip()
+    with open(".entsoe_token", "r") as file:
+      entsoe_token = file.read().rstrip()
 
-    #url for api-request
-    get_url = f"https://web-api.tp.entsoe.eu/api?securityToken={entsoe_token}&documentType=A44&in_Domain=10YFI-1--------U&out_Domain=10YFI-1--------U&periodStart={previous_UTC_formatted}&periodEnd={period_end_formatted}"
-    
+    #construct url for api-request
+    get_url = f"https://web-api.tp.entsoe.eu/api?securityToken={entsoe_token}&documentType=A44&in_Domain=10YFI-1--------U&out_Domain=10YFI-1--------U&periodStart={start_of_previous_day_formatted}&periodEnd={period_end_formatted}"
+
     try:
-        print(f"Request sent at {datetime.now()}") #log
-        response_text = requests.get(get_url).text
+      to_log = "ENTSOE Request sent."
+      print(to_log)
+      self.logger.info(to_log)
+      response_text = requests.get(get_url).text
     except requests.RequestException as e:
-        print(f"An error occurred during the request: {e}") #log
-        return None
-    
-    print(f"Answer received at at {datetime.now()}") #log
+      to_log = f"An error occurred during the request: {e}"
+      print(to_log)
+      self.logger.error(to_log)
+      self.current_error = "Virhe tietojen haussa ENTSOE:lta, yritä myöhemmin uudelleen."
+      return False
 
-    global prices
-    prices_updated_flag = (response_text == prices) #set flag if new prices (currently not used)
-    prices = response_text #update the prices with the response
+    self.current_error = ""
+    to_log = "Answer received."
+    print(to_log)
+    self.logger.info(to_log)
+
+    prices_dict: Optional[dict[datetime, float]] = self.extract_prices_into_dict(response_text)
+    if prices_dict is not None:
+      if (self.prices_dict is None) or (max(self.prices_dict) < max(prices_dict)):
+        self.prices_dict = prices_dict
+        to_log = "Prices updated"
+        print(to_log)
+        self.logger.info(to_log)
+        return True
+      else:
+        to_log = "No new prices received!"
+        print(to_log)
+        self.logger.debug(to_log)
+        return False
+    else:
+      to_log = "No prices extracted in parsing!"
+      print(to_log)
+      self.logger.error(to_log)
+      return False
 
 
-    return prices_updated_flag
-
-
-
-def construct_texts():
-
-    current_UTC = datetime.now(timezone.utc).replace(tzinfo=None)
-    current_HEL = datetime.now()
-    timezone_difference_h = (current_HEL - current_UTC).seconds / 3600
-    current_HEL_hour = current_HEL.strftime("%H")
-
-    #parse to XML
+  def extract_prices_into_dict(self, prices_text: str) -> Optional[dict]:
     try:
-        root = ET.fromstring(prices)
+        root = ET.fromstring(prices_text)
+        self.current_error = ""
     except ET.ParseError as e:
-        print("XML Parsing Error:", e)
+      to_log = f"XML Parsing Error: {e}"
+      print(to_log)
+      self.logger.error(to_log)
+      self.current_error = "Virhe ENTSOE:n palauttamassa datassa, yritä myöhemmin uudelleen."
+      return None
 
-    #initial value
-    displayable_text = ""
+    prices_dict: dict[datetime, float] = dict()
 
-    #hour at which the API-data starts each day
-    start_hour = 23
-    #collector
-    prices_printed = 0
-    #maximum number of prices in the response
-    prices_to_print = 20
+    for timeseries in root.findall("{*}TimeSeries"):
+      period = timeseries.find("{*}Period")
+      if period is not None:
+        timeInterval = period.find("{*}timeInterval")
+        if timeInterval is not None:
+          start_time_UTC = timeInterval.find("{*}start")
+          if start_time_UTC is not None and start_time_UTC.text is not None:
+            period_start_time_local = datetime.fromisoformat(start_time_UTC.text).astimezone(ZoneInfo("Europe/Helsinki"))
+          else:
+            self.current_error = "Virhe ENTSOE:n palauttamassa datassa, yritä myöhemmin uudelleen."
+            return None
+        else:
+          self.current_error = "Virhe ENTSOE:n palauttamassa datassa, yritä myöhemmin uudelleen."
+          return None
+        for point in period.findall("{*}Point"):
+          position = point.find("{*}position")
+          price = point.find("{*}price.amount")
+          if position is not None and price is not None:
+            if position.text and price.text is not None:
+              hour = int(position.text) - 1
+              point_time = period_start_time_local + timedelta(hours=hour)
+              prices_dict[point_time] = float(price.text)
 
-    #construct the reponse-message by parsing XML
-    for day in root.findall('{*}TimeSeries'):
-        end_date = day.find("{*}Period").find("{*}timeInterval").find("{*}end").text[:10] #find date of last day
-        now_date = current_HEL.strftime("%Y-%m-%d")[:10]
-        if now_date <= end_date: #if future prices exist
-            for point in day.find("{*}Period").findall('{*}Point'): #find all points (= hourly prices)
-                if prices_printed >= prices_to_print: #if enough prices
-                    break
-                index_of_point = int(point.find('{*}position').text) #the points are only indexed starting from day 1 23:00 UTC and go until day 2 22:00 UTC, points do not contain time info other than the start
-                hour_abs = (start_hour + index_of_point - 1) #get hours from start by 23 (start of data) + index - 1
-                HEL_hour_abs = int(hour_abs + timezone_difference_h) #convert to UTC+2
-                HEL_hour_real = HEL_hour_abs % 24 #convert to real hours (eg. 24 -> 00, 25 -> 01...)
-                if now_date < end_date or HEL_hour_real >= int(current_HEL_hour) or HEL_hour_abs == 48: #if hour in the future -> add to message
-                    price = float(point.find('{*}price.amount').text) #get price from point
-                    price_snt_kwh = price / 10 #to snt/kwh
-                    price_snt_kwh_formatted = format(price_snt_kwh, '.2f') #format
-                    tags = "#" * round(price_snt_kwh * 2) #visualize with "#...#"
-                    hours_to_point = prices_printed #hours until current point
-                    displayable_text += f"{HEL_hour_real:0{2}d} [{hours_to_point:0{2}d}]:   {price_snt_kwh_formatted}snt    {tags}\n" #construct final text
-                    prices_printed += 1 #increment
+    return prices_dict
 
-    #display error-message if displayable text is empty after loop
-    if len(displayable_text) == 0:
-        displayable_text = "Virhe hintojen hakemisessa ENTSOE:sta, ota yhteyttä @antonpodlozny ja kokeile myöhemmin uudelleen."
-    
-    #return to caller
-    return displayable_text
+  def get_price_text(self) -> str:
+    text_to_return = ""
+    now = datetime.now(ZoneInfo("Europe/Helsinki"))
+    hour_ago = now - timedelta(hours=1)
+    if self.prices_dict is not None:
+      coming_prices = [(time_of_price, price) for (time_of_price, price) in self.prices_dict.items() if time_of_price > hour_ago]
+      coming_prices_sorted = sorted(coming_prices, key=lambda x: x[0])
+
+      if len(coming_prices_sorted) != 0:
+        text_to_return += f"Hinnat {now.strftime("%d.%m. %H:")}00->\n"
+        added = 0
+        for time_of_price, price in coming_prices_sorted:
+          price_snt_kwh = price / 10 #EUR/MWh to snt/kWhx
+          price_snt_kwh_rounded = format(price_snt_kwh, ".2f")
+          tags = "#" * round(price_snt_kwh * TAGS_PER_EUR) #visualize price with "#" per every 0.50snt
+          hours_to_point = math.ceil((time_of_price - now).total_seconds() / 3600) #hours until the price
+          text_to_return += f"{time_of_price.hour:0{2}d} [{hours_to_point:0{2}d}]:   {price_snt_kwh_rounded}snt    {tags}\n"
+          if added >= PRICES_TO_PRINT:
+            return text_to_return
+        return text_to_return
+      else:
+        return "Ei ajantasaisia hintoja, yritä myöhemmin uudelleen."
+    else:
+      return "Ei ajantasaisia hintoja, yritä myöhemmin uudelleen."
+
+
+
+if __name__ == '__main__':
+  test = ElecPrices()
+  print(test.get_price_text())
