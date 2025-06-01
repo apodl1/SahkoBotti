@@ -125,6 +125,7 @@ class ElecPrices():
           tags = "#" * round(price_snt_kwh * TAGS_PER_EUR) #visualize price with "#" per every 0.50snt
           hours_to_point = math.ceil((time_of_price - now).total_seconds() / 3600) #hours until the price
           text_to_return += f"{time_of_price.hour:0{2}d} [{hours_to_point:0{2}d}]:   {price_snt_kwh_rounded}snt    {tags}\n"
+          added += 1
           if added >= PRICES_TO_PRINT:
             return text_to_return
         return text_to_return
