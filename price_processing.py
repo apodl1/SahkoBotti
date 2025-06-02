@@ -53,10 +53,10 @@ class ElecPrices():
     with open("output.xml", "w", encoding="utf-8") as file:
         file.write(response_text)
 
-    prices_dict: Optional[dict[datetime, float]] = self.extract_prices_into_dict(response_text)
-    if prices_dict is not None:
-      if (self.prices_dict is None) or (max(self.prices_dict) < max(prices_dict)):
-        self.prices_dict = prices_dict
+    new_prices_dict: Optional[dict[datetime, float]] = self.extract_prices_into_dict(response_text)
+    if new_prices_dict is not None:
+      if (self.prices_dict is None) or (max(self.prices_dict) < max(new_prices_dict)):
+        self.prices_dict = new_prices_dict
         to_log = "Prices updated"
         print(to_log)
         self.logger.info(to_log)
