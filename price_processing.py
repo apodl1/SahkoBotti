@@ -50,9 +50,6 @@ class ElecPrices():
     print(to_log)
     self.logger.info(to_log)
 
-    with open("output.xml", "w", encoding="utf-8") as file:
-        file.write(response_text)
-
     new_prices_dict: Optional[dict[datetime, float]] = self.extract_prices_into_dict(response_text)
     if new_prices_dict is not None:
       if (self.prices_dict is None) or (max(self.prices_dict) < max(new_prices_dict)):
