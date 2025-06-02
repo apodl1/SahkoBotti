@@ -58,7 +58,7 @@ async def fetch_with_retry_job(context: ContextTypes.DEFAULT_TYPE):
     data = cast(dict[str, ElecPrices], context.job.data)
     prices_object = data['prices_object']
     success = prices_object.fetch_prices_to_dict()
-    if not success and context.job_queue:
+    if not success and context.job_queue and len(context.job_queue.jobs()) == 0:
       context.job_queue.run_once(
         fetch_with_retry_job,
         when=3600,  # in seconds
