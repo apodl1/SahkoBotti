@@ -8,7 +8,7 @@ Data supplied by the ENTSO-E Transparency Platform (transparency.entsoe.eu).
 - **Fast**. Sub-1s response time on average. No more loading web-pages, cookies or analytics.
 - **Only shows coming prices**. No more searching for the current price among historical data.
 - **Constant visualization scale**. Know if it is cheap or expensive at a glance without checking out the axis markings.
-- **Time-to-price display**. Know exactly what to set your dishwasher timer to wihtout mental math.
+- **Time-to-price display**. Know exactly what to set your dishwasher timer to without mental math.
 - **Private**. No analytics collected (check out for yourself in the source code ;) )
 
 Example response:
