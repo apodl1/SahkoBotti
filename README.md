@@ -2,7 +2,7 @@
 
 A Telegram bot for getting the coming hourly spot price of electricity in Finland. Running instance can be found at [t.me/elektroniBot](https://t.me/elektroniBot) or with the nick @elektroniBot on Telegram.
 
-Data supplied by the [ENTSO-E Transparency Platform](transparency.entsoe.eu).
+Data supplied by the [ENTSO-E Transparency Platform](https://transparency.entsoe.eu).
 
 ### Why this and not the other innumerable electricity price display solutions?
 - **Fast**. Sub-1s response time on average. No more loading web-pages, cookies or analytics
