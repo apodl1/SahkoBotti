@@ -1,1 +1,3 @@
-better comments for price_processing
+- streamline and break down price_processing
+- support for 15min intervals
+- options for more prices shown
