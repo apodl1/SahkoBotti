@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, time
 from zoneinfo import ZoneInfo
 import math
 from typing import Optional
+from collections import defaultdict
 
 PRICES_TO_PRINT = 20
 TAGS_PER_EUR = 2
@@ -32,7 +33,9 @@ class ElecPrices():
 
     #construct url for api-request
     get_url = f"https://web-api.tp.entsoe.eu/api?securityToken={entsoe_token}&documentType=A44&in_Domain=10YFI-1--------U&out_Domain=10YFI-1--------U&periodStart={start_of_previous_day_formatted}&periodEnd={period_end_formatted}"
+    print(get_url)
 
+    #get xml from api
     try:
       to_log = "ENTSOE Request sent."
       print(to_log)
@@ -45,25 +48,26 @@ class ElecPrices():
       self.current_error = "Virhe tietojen haussa ENTSOE:lta, yritä myöhemmin uudelleen."
       return False
 
-    self.current_error = ""
+    self.current_error = None
     to_log = "Answer received."
     print(to_log)
     self.logger.info(to_log)
 
+    #construct new dict of times and prices
     new_prices_dict: Optional[dict[datetime, float]] = self.extract_prices_into_dict(response_text)
-    if new_prices_dict is not None:
-      if (self.prices_dict is None) or (max(self.prices_dict) < max(new_prices_dict)):
+    if new_prices_dict is not None: #new dict constructed successfully
+      if (self.prices_dict is None) or (max(self.prices_dict) < max(new_prices_dict)): #the newly constructed dict is more recent than the current stored one -> store the new one
         self.prices_dict = new_prices_dict
         to_log = "Prices updated"
         print(to_log)
         self.logger.info(to_log)
         return True
-      else:
+      else: #no new prices in the new dict
         to_log = "No new prices received!"
         print(to_log)
         self.logger.debug(to_log)
         return False
-    else:
+    else: #no new dict
       to_log = "No prices extracted in parsing!"
       print(to_log)
       self.logger.error(to_log)
@@ -73,7 +77,7 @@ class ElecPrices():
   def extract_prices_into_dict(self, prices_text: str) -> Optional[dict]:
     try:
         root = ET.fromstring(prices_text)
-        self.current_error = ""
+        self.current_error = None
     except ET.ParseError as e:
       to_log = f"XML Parsing Error: {e}"
       print(to_log)
@@ -83,48 +87,73 @@ class ElecPrices():
 
     prices_dict: dict[datetime, float] = dict()
 
+    #structure with data and metadata for a a period of 24h
     for timeseries in root.findall("{*}TimeSeries"):
+      #structure containing a time interval, the time datapoints for that interval and their resolution
       period = timeseries.find("{*}Period")
       if period is not None:
+        #start and end of the interval
         timeInterval = period.find("{*}timeInterval")
         if timeInterval is not None:
           start_time_UTC = timeInterval.find("{*}start")
           end_time_UTC = timeInterval.find("{*}end")
           if start_time_UTC is not None and start_time_UTC.text is not None and end_time_UTC is not None and end_time_UTC.text is not None:
             period_start_time_local = datetime.fromisoformat(start_time_UTC.text).astimezone(ZoneInfo("Europe/Helsinki"))
-            period_end_time_local = datetime.fromisoformat(end_time_UTC.text).astimezone(ZoneInfo("Europe/Helsinki"))
-          else:
+            #period_end_time_local = datetime.fromisoformat(end_time_UTC.text).astimezone(ZoneInfo("Europe/Helsinki")) holdover
+          else: #missing data
             self.current_error = "Virhe ENTSOE:n palauttamassa datassa, yritä myöhemmin uudelleen."
             return None
-        else:
+        else: #missing data
           self.current_error = "Virhe ENTSOE:n palauttamassa datassa, yritä myöhemmin uudelleen."
           return None
-        for point in period.findall("{*}Point"):
+
+        #holders for filling in data later
+        last_point_quarts = 0
+        last_point_price = None
+
+        #price points for the interval
+        points = period.findall("{*}Point")
+        for point in points:
           position = point.find("{*}position")
           price = point.find("{*}price.amount")
           if position is not None and price is not None:
-            if position.text and price.text is not None:
-              hour = int(position.text) - 1
-              point_time = period_start_time_local + timedelta(hours=hour)
+            if position.text and price.text is not None: #all needed data is available
+              quarts = int(position.text) - 1
+              point_time = period_start_time_local + timedelta(minutes=quarts*15)
               prices_dict[point_time] = float(price.text)
-        cur_time = period_start_time_local
-        cur_price = prices_dict[cur_time]
-        # Go through the time period, filling in hours without a price (nesessary due to the api xml omitting points if the price is the same as the previous point)
-        while cur_time <= period_end_time_local:
-          if cur_time not in prices_dict:
-            prices_dict[cur_time] = cur_price
-          else:
-            cur_price = prices_dict[cur_time]
-          cur_time += timedelta(hours=1)
+              #a datapoint is omitted in the xml if the price is same as the last point, here we fill in these points usign holders from above
+              while last_point_quarts < quarts - 1 and quarts != 0:
+                if last_point_price is None: #should not happen as teh first point is always present -> last_point_price should have a value if quarts != 0
+                  self.current_error = "Jotain minkä pitäisi olla mahdotonta tapahtui - ota yhteys @antonpodlozny"
+                  return None
+                last_point_quarts += 1
+                point_time = period_start_time_local + timedelta(minutes=last_point_quarts*15)
+                prices_dict[point_time] = float(last_point_price)
+              #endwhile
+              last_point_quarts = quarts
+              last_point_price = price.text
+            #endif
+          #endif
+        #endfor
+      #endif
+    #endfor
 
     return prices_dict
 
-  def get_price_text(self) -> str:
+  def compose_price_text(self) -> str:
     text_to_return = ""
     now = datetime.now(ZoneInfo("Europe/Helsinki"))
     hour_ago = now - timedelta(hours=1)
     if self.prices_dict is not None:
-      coming_prices = [(time_of_price, price) for (time_of_price, price) in self.prices_dict.items() if time_of_price > hour_ago]
+      #temporary, handle 15min intervals by averaging hourly prices
+      prices_hourly: dict[datetime, list[float]] = defaultdict(list)
+      for (time_of_price, price) in self.prices_dict.items():
+        only_hour_dt = time_of_price.replace(minute=0, second=0, microsecond=0)
+        prices_hourly[only_hour_dt].append(price)
+      prices_hourly_avg: dict[datetime, float] = dict()
+      for (time_of_price, prices) in prices_hourly.items():
+        prices_hourly_avg[time_of_price] = sum(prices) / len(prices)
+      coming_prices = [(time_of_price, price) for (time_of_price, price) in prices_hourly_avg.items() if time_of_price > hour_ago]
       coming_prices_sorted = sorted(coming_prices, key=lambda x: x[0])
 
       if len(coming_prices_sorted) != 0:
@@ -149,4 +178,4 @@ class ElecPrices():
 
 if __name__ == '__main__':
   test = ElecPrices()
-  print(test.get_price_text())
+  print(test.compose_price_text())

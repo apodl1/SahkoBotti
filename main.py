@@ -45,7 +45,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def price(update: Update, context: ContextTypes.DEFAULT_TYPE, prices_object: ElecPrices):
   if update.effective_chat:
-    await context.bot.send_message(chat_id = update.effective_chat.id, text = prices_object.get_price_text())
+    await context.bot.send_message(chat_id = update.effective_chat.id, text = prices_object.compose_price_text())
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
   if update.effective_chat:
